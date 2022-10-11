@@ -69,16 +69,6 @@ sys_sleep(void)
   return 0;
 }
 
-
-#ifdef LAB_PGTBL
-int
-sys_pgaccess(void)
-{
-  // lab pgtbl: your code here.
-  return 0;
-}
-#endif
-
 uint64
 sys_kill(void)
 {
@@ -100,3 +90,33 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+#ifdef LAB_PGTBL
+int
+sys_pgaccess(void)
+{
+  uint64 pageAddr;
+  int pageCount;
+  uint64 outputAddr;
+  unsigned int buffer = 0;
+
+  argaddr(0, &pageAddr);
+  argint(1, &pageCount);
+  argaddr(2, &outputAddr);
+  
+  if(pageCount > 64){
+    printf("Number of pages have to be less then 64!");
+    return -1;
+  }
+ 
+  for(int i = 0; i < pageCount; i++){
+    pte_t *pte = walk(myproc()->pagetable, pageAddr + i*PGSIZE, 0);
+    if (pte && *pte & PTE_A){
+      buffer |= 1 << i;
+      *pte &= ~PTE_A;
+    }
+  }
+  copyout(myproc()->pagetable, outputAddr, (char *)&buffer,(pageCount+7)/8);
+  return 0;
+}
+#endif
